@@ -8,7 +8,7 @@ winston.level = 'debug';
 
 export default class Broker {
   numTask: number;
-  MAXQUEUE: number;
+  maxQueue: number;
   queueName: string;
   nextDest: string;
   frontPort: number;
@@ -17,13 +17,14 @@ export default class Broker {
 
   constructor(options: {
     queueName: string, nextDest: string,
-    frontPort: number, backPort: number
+    frontPort: number, backPort: number,
+    maxQueue: number,
   }) {
     const {
-      queueName, nextDest, frontPort, backPort,
+      queueName, nextDest, frontPort, backPort, maxQueue
     } = options;
     this.numTask = 0;
-    this.MAXQUEUE = 4;
+    this.maxQueue = maxQueue;
     this.queueName = queueName;
     this.nextDest = nextDest;
     this.frontPort = frontPort;
@@ -80,7 +81,7 @@ export default class Broker {
     const objWork = JSON.parse(payload.toString());
     winston.debug('\tReceived payload\n', objWork);
 
-    if (this.numTask >= this.MAXQUEUE) {
+    if (this.numTask >= this.maxQueue) {
       winston.debug(' The queue is full, We will reject the task');
       respMsg[2] = 'rejected';
     } else {

@@ -9,12 +9,21 @@ import Client from './Client.js';
 winston.level = 'debug';
 jasmine.DEFAULT_TIMEOUT_INTERVAL = 60000;
 
+/**
+ * Returns a random integer between min (inclusive) and max (inclusive)
+ * Using Math.round() will give you a non-uniform distribution!
+ */
+function getRandomInt(min, max) {
+  return Math.floor(Math.random() * ((max - min) + 1)) + min;
+}
+
 async function setup(options) {
   const opts = Object.assign({}, {
     queueName: 'queue1',
     nextDest: 'nextBroker',
     frontPort: 5551,
     backPort: 5552,
+    maxQueue: 10,
   }, options);
   const fixtures = await (new Broker(opts)).initBroker();
   return fixtures;
@@ -62,3 +71,49 @@ test('An client can create a task', async (done) => {
     teardown(brokerInstance).then(done);
   }, 2000);
 });
+
+test('An client can\'t create a task when the queue is full', async (done) => {
+  let intMax = getRandomInt(1, 20);
+  let intReject = getRandomInt(1, 10);
+  const brokerInstance = await setup({
+    maxQueue: intMax,
+  });
+  const mockFn = jest.fn().mockImplementation((msg, i) => {
+    let strMsg = '';
+    if (typeof msg === 'object' && msg) {
+      strMsg = msg.toString(); // Works!
+    }
+    if (i >= intMax) {
+      expect(strMsg).toBe("rejected");
+    } else {
+      expect(strMsg).toBe("received");
+    }
+    console.log(strMsg);
+    return strMsg;
+  });
+
+  let arrClients = [];
+  for (let i = 0; i < intMax + intReject; i += 1) {
+    arrClients.push(new Client({
+      queueUrl: 'tcp://localhost:5551',
+      onMessage: msg => mockFn(msg, i),
+    }).init());
+  }
+  arrClients = await Promise.all(arrClients);
+
+  for (let i = 0; i < intMax + intReject; i += 1) {
+    arrClients[i].send({
+      type: 'task',
+      params: [Math.random()],
+    });
+  }
+
+  setTimeout(() => {
+    expect(mockFn).toHaveBeenCalledTimes(intMax + intReject);
+    for (let i = 0; i < intMax + intReject; i += 1) {
+      arrClients[i].deinit();
+    }
+    teardown(brokerInstance).then(done);
+  }, 2000);
+});
+
