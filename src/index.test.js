@@ -75,6 +75,8 @@ test('An client can create a task', async (done) => {
 test('An client can\'t create a task when the queue is full', async (done) => {
   let intMax = getRandomInt(1, 20);
   let intReject = getRandomInt(1, 10);
+  winston.debug('intMax %j', intMax);
+  winston.debug('intReject %j', intReject);
   const brokerInstance = await setup({
     maxQueue: intMax,
   });
@@ -83,12 +85,13 @@ test('An client can\'t create a task when the queue is full', async (done) => {
     if (typeof msg === 'object' && msg) {
       strMsg = msg.toString(); // Works!
     }
+    winston.debug('Index i %j', i);
+    winston.debug('strMsg %j', strMsg);
     if (i >= intMax) {
       expect(strMsg).toBe("rejected");
     } else {
       expect(strMsg).toBe("received");
     }
-    console.log(strMsg);
     return strMsg;
   });
 
