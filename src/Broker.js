@@ -31,12 +31,18 @@ export default class Broker {
   }
 
   async initQueue(): Promise<Broker> {
-    this.queueInst = await (new MongoSMQ()).init();
+    this.queueInst = await (new MongoSMQ({
+      colName: this.queueName,
+    })).init();
     return this;
   }
 
-  async deInitQueue() {
+  deInitQueue() {
     return this.queueInst.deinit();
+  }
+
+  cleanQueue() {
+    return this.queueInst.clean();
   }
 
   async initBroker() {
@@ -64,30 +70,29 @@ export default class Broker {
     // Note that separate message parts come as function arguments.
     const [reqAddress, delimiter, payload] = reqMsg;
 
-    winston.debug('*** Frondend received task with info', {
+    winston.debug('Frontend received task with info\n', {
       reqAddress: reqAddress.toString('hex'),
       delimiter: reqAddress.toString(),
     });
-    winston.debug('*** Current number of Tasks: %d', this.numTask);
+    winston.debug(' Current number of Tasks: %d', this.numTask);
 
     const respMsg = [reqAddress, delimiter];
     const objWork = JSON.parse(payload.toString());
-    winston.debug('****** Received payload', objWork);
+    winston.debug('\tReceived payload\n', objWork);
 
     if (this.numTask >= this.MAXQUEUE) {
-      winston.debug('****** The queue is full, We will reject the task');
+      winston.debug(' The queue is full, We will reject the task');
       respMsg[2] = 'rejected';
     } else {
       this.numTask = this.numTask + 1;
-      winston.debug('****** The queue is not full, We will receive the task');
-      winston.debug('*** Current number of Tasks: %d', this.numTask);
-
+      winston.debug(' The queue is not full, We will receive the task');
+      winston.debug('   Current number of Tasks: %d', this.numTask);
       const resp = await this.queueInst.createMessage(objWork);
-      winston.debug('****** New Task is created with ID:', resp.toString());
+      winston.debug('   New Task is created with ID:\n', resp.toString());
       respMsg[2] = 'received';
     }
 
-    winston.info('*** Send response', {
+    winston.info('  Send response\n', {
       respAddress: respMsg[0].toString('hex'),
       delimiter: respMsg[1].toString(),
       respPayload: respMsg[2],
