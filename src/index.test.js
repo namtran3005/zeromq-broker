@@ -73,13 +73,15 @@ test('An client can create a task', async (done) => {
 });
 
 test('An client can\'t create a task when the queue is full', async (done) => {
-  let intMax = getRandomInt(1, 20);
-  let intReject = getRandomInt(1, 10);
+  let intMax = getRandomInt(1, 50);
+  let intReject = getRandomInt(1, 20);
   winston.debug('intMax %j', intMax);
   winston.debug('intReject %j', intReject);
   const brokerInstance = await setup({
     maxQueue: intMax,
   });
+  let numReceived = 0;
+  let numReject = 0;
   const mockFn = jest.fn().mockImplementation((msg, i) => {
     let strMsg = '';
     if (typeof msg === 'object' && msg) {
@@ -87,10 +89,10 @@ test('An client can\'t create a task when the queue is full', async (done) => {
     }
     winston.debug('Index i %j', i);
     winston.debug('strMsg %j', strMsg);
-    if (i >= intMax) {
-      expect(strMsg).toBe("rejected");
-    } else {
-      expect(strMsg).toBe("received");
+    if (strMsg === 'rejected') {
+      numReject += 1;
+    } else if (strMsg === 'received') {
+      numReceived += 1;
     }
     return strMsg;
   });
@@ -113,6 +115,8 @@ test('An client can\'t create a task when the queue is full', async (done) => {
 
   setTimeout(() => {
     expect(mockFn).toHaveBeenCalledTimes(intMax + intReject);
+    expect(numReceived).toBe(intMax);
+    expect(intReject).toBe(numReject);
     for (let i = 0; i < intMax + intReject; i += 1) {
       arrClients[i].deinit();
     }
