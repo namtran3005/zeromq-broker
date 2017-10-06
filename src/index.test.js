@@ -72,11 +72,10 @@ test('An client can create a task', async (done) => {
   }, 2000);
 });
 
+
 test('An client can\'t create a task when the queue is full', async (done) => {
   let intMax = getRandomInt(1, 50);
   let intReject = getRandomInt(1, 20);
-  winston.debug('intMax %j', intMax);
-  winston.debug('intReject %j', intReject);
   const brokerInstance = await setup({
     maxQueue: intMax,
   });
@@ -87,8 +86,6 @@ test('An client can\'t create a task when the queue is full', async (done) => {
     if (typeof msg === 'object' && msg) {
       strMsg = msg.toString(); // Works!
     }
-    winston.debug('Index i %j', i);
-    winston.debug('strMsg %j', strMsg);
     if (strMsg === 'rejected') {
       numReject += 1;
     } else if (strMsg === 'received') {
@@ -122,5 +119,71 @@ test('An client can\'t create a task when the queue is full', async (done) => {
     }
     teardown(brokerInstance).then(done);
   }, 2000);
+});
+
+
+test('A broker Instance after recover should get correct current numTask', async (done) => {
+  let intMax = 250;
+  let brokerInstance = await setup({
+    maxQueue: intMax,
+  });
+  let numReceived = 0;
+  let numReject = 0;
+
+  const repeatIn = (ms: number, interval: number, cb: Function) => {
+    let countDown = ms;
+    return new Promise((resolve) => {
+      const timerId = setInterval(async () => {
+        if (countDown === 0) {
+          clearTimeout(timerId);
+          resolve();
+          return;
+        }
+        await cb();
+        countDown -= interval;
+      }, interval);
+    });
+  };
+
+  let totalClient = 0;
+  const mockFn = jest.fn().mockImplementation((msg, i) => {
+    let strMsg = '';
+    if (typeof msg === 'object' && msg) {
+      strMsg = msg.toString(); // Works!
+    }
+    if (strMsg === 'rejected') {
+      numReject += 1;
+    } else if (strMsg === 'received') {
+      numReceived += 1;
+    }
+    return strMsg;
+  });
+  let arrPromises = [];
+  let arrClients = [];
+  arrPromises.push(repeatIn(10000, 1000, () => brokerInstance.restart()));
+  arrPromises.push(repeatIn(10000, 200, async () => {
+    const numClient = 5;
+    for (let i = 0; i < numClient; i += 1) {
+      const numId = totalClient;
+      totalClient += 1;
+      const client = await (new Client({
+        queueUrl: 'tcp://localhost:5551',
+        onMessage: msg => mockFn(msg, numId),
+      })).init();
+      client.send({
+        type: 'task',
+        params: [Math.random()],
+      })
+      arrClients.push(client);
+    }
+  }));
+  Promise.all(arrPromises).then(() => {
+    expect(mockFn).toHaveBeenCalledTimes(totalClient);
+    expect(brokerInstance.numTask).toBe(totalClient);
+    for (let i = 0; i < totalClient; i += 1) {
+      arrClients[i].deinit();
+    }
+    teardown(brokerInstance).then(done);
+  })
 });
 

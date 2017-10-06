@@ -35,6 +35,7 @@ export default class Broker {
     this.queueInst = await (new MongoSMQ({
       colName: this.queueName,
     })).init();
+    this.numTask = await this.queueInst.total();
     return this;
   }
 
@@ -65,6 +66,12 @@ export default class Broker {
     this.frontend.close();
     this.backend.close();
     await this.deInitQueue();
+  }
+
+  async restart() {
+    await this.deInitBroker();
+    await this.initBroker();
+    return this;
   }
 
   async receiveTask(...reqMsg) {
