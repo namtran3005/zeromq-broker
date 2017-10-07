@@ -9,8 +9,8 @@ type MongoSMQ$options = {
     visibility?: number,
 };
 
-declare module "mongo-message" {
-  // Defines the type of a Path class within this `declare module` body, but 
+declare module 'mongo-message' {
+  // Defines the type of a Path class within this `declare module` body, but
   // does not export it. It can only be referenced by other things inside the
   // body of this `declare module`
   declare class MongoSMQ {

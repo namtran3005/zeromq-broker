@@ -1,34 +1,33 @@
 /* @flow */
-import zeromq from 'zeromq';
+import zeromq from 'zeromq'
 
 export default class Client {
   queueUrl: string;
-  constructor(options: {
+  constructor (options: {
     queueUrl: string,
     onMessage: (msg: mixed) => string,
   }) {
     const {
       queueUrl,
-      onMessage,
-    } = options;
-    this.queueUrl = queueUrl;
-    this.onMessage = onMessage;
+      onMessage
+    } = options
+    this.queueUrl = queueUrl
+    this.onMessage = onMessage
   }
 
-  async init(): Promise<Client> {
-    this.requester = zeromq.socket('req');
-    this.requester.connect(this.queueUrl);
-    this.requester.setsockopt('linger', 0);
-    this.requester.on('message', this.onMessage.bind(this));
-    return this;
+  async init (): Promise<Client> {
+    this.requester = zeromq.socket('req')
+    this.requester.connect(this.queueUrl)
+    this.requester.setsockopt('linger', 0)
+    this.requester.on('message', this.onMessage.bind(this))
+    return this
   }
 
-  async deinit() {
-    return this.requester.close();
+  async deinit () {
+    return this.requester.close()
   }
 
-  send(payload) {
-    this.requester.send(JSON.stringify(payload));
+  send (payload) {
+    this.requester.send(JSON.stringify(payload))
   }
-
 }
