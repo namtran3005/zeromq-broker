@@ -21,7 +21,7 @@ export default class Broker {
     maxQueue: number,
   }) {
     const {
-      queueName, nextDest, frontPort, backPort, maxQueue
+      queueName, visibility, nextDest, frontPort, backPort, maxQueue
     } = options;
     this.numTask = 0;
     this.maxQueue = maxQueue;
@@ -29,11 +29,13 @@ export default class Broker {
     this.nextDest = nextDest;
     this.frontPort = frontPort;
     this.backPort = backPort;
+    this.visibility = visibility || 30;
   }
 
   async initQueue(): Promise<Broker> {
     this.queueInst = await (new MongoSMQ({
       colName: this.queueName,
+      visibility: this.visibility,
     })).init();
     this.numTask = await this.queueInst.total();
     return this;
@@ -51,6 +53,8 @@ export default class Broker {
     await this.initQueue();
     this.frontend = zeromq.socket('router');
     this.backend = zeromq.socket('router');
+    this.frontend.setsockopt('linger', 0);
+    this.backend.setsockopt('linger', 0);
     this.frontend.bindSync(`tcp://*:${this.frontPort}`);
     this.backend.bindSync(`tcp://*:${this.backPort}`);
     this.frontend.on('message', (...reqMsg) => {
@@ -100,12 +104,43 @@ export default class Broker {
       respMsg[2] = 'received';
     }
 
-    winston.info('  Send response\n', {
+    winston.debug('  Send response\n', {
       respAddress: respMsg[0].toString('hex'),
       delimiter: respMsg[1].toString(),
       respPayload: respMsg[2],
     });
 
     return this.frontend.send(respMsg);
+  }
+
+  async dispatchTask(...reqMsg) {
+    // Note that separate message parts come as function arguments.
+    const [reqAddress, delimiter, payload] = reqMsg;
+
+    winston.debug('Backend received req with info\n', {
+      reqAddress: reqAddress.toString('hex'),
+      delimiter: reqAddress.toString(),
+    });
+
+    const respMsg = [reqAddress, delimiter];
+    const objResult = JSON.parse(payload.toString());
+    winston.debug('\tReceived Result\n', objResult);
+
+    if (objResult && objResult.message && objResult.message.result) {
+      const newMsg = await this.queueInst.updateMessage(objResult);
+      winston.debug('  Update task with result\n', newMsg.toString());
+    }
+
+    let getMsg = await this.queueInst.getMessage();
+    getMsg = getMsg || '';
+    respMsg[2] = JSON.stringify(getMsg);
+
+    winston.debug('  Send work\n', {
+      respAddress: respMsg[0].toString('hex'),
+      delimiter: respMsg[1].toString(),
+      respPayload: respMsg[2],
+    });
+
+    return this.backend.send(respMsg);
   }
 }

@@ -19,7 +19,7 @@ export default class Client {
     this.requester = zeromq.socket('req');
     this.requester.connect(this.queueUrl);
     this.requester.setsockopt('linger', 0);
-    this.requester.on('message', this.onMessage);
+    this.requester.on('message', this.onMessage.bind(this));
     return this;
   }
 

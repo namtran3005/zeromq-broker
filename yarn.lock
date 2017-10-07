@@ -2710,9 +2710,9 @@ mkdirp@0.5, "mkdirp@>=0.5 0", mkdirp@^0.5.1:
   dependencies:
     minimist "0.0.8"
 
-mongo-message@^0.0.7:
-  version "0.0.7"
-  resolved "https://registry.yarnpkg.com/mongo-message/-/mongo-message-0.0.7.tgz#636398effa165762558b2b42a3018c87d656f29c"
+mongo-message@^0.0.8:
+  version "0.0.8"
+  resolved "https://registry.yarnpkg.com/mongo-message/-/mongo-message-0.0.8.tgz#73561c8ea85ec9af4e3bbc664de4e05ff7a87292"
   dependencies:
     bluebird "^3.5.0"
     mongoose "^4.11.10"
