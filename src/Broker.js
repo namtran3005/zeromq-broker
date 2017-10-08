@@ -14,6 +14,8 @@ export default class Broker {
   frontPort: number;
   backPort: number;
   queueInst: MongoSMQ;
+  frontend : any;
+  backend : any;
 
   constructor (options: {
     queueName: string,
@@ -61,10 +63,25 @@ export default class Broker {
     this.frontend.bindSync(`tcp://*:${this.frontPort}`)
     this.backend.bindSync(`tcp://*:${this.backPort}`)
     this.frontend.on('message', (...reqMsg) => {
-      this.receiveTask(...reqMsg)
+      const [reqAddress, delimiter, payload] = reqMsg
+      const parsed = JSON.parse(payload.toString())
+      winston.debug('Frontend received task with info\n', {
+        reqAddress: reqAddress.toString('hex'),
+        delimiter: delimiter.toString(),
+        payload: parsed
+      })
+      winston.debug(' Current number of Tasks: %d', this.numTask)
+      this.receiveTask(reqAddress, delimiter, parsed)
     })
     this.backend.on('message', (...reqMsg) => {
-      this.dispatchTask(...reqMsg)
+      const [reqAddress, delimiter, payload] = reqMsg
+      const parsed = JSON.parse(payload.toString())
+      winston.debug('Backend received payload with info\n', {
+        reqAddress: reqAddress.toString('hex'),
+        delimiter: delimiter.toString(),
+        payload: JSON.parse(payload.toString())
+      })
+      this.dispatchTask(reqAddress, delimiter, parsed)
     })
     return this
   }
@@ -93,74 +110,67 @@ export default class Broker {
     this.numTask = this.numTask - 1
   }
 
-  async receiveTask (...reqMsg) {
-    // Note that separate message parts come as function arguments.
-    const [reqAddress, delimiter, payload] = reqMsg
-
-    winston.debug('Frontend received task with info\n', {
-      reqAddress: reqAddress.toString('hex'),
-      delimiter: reqAddress.toString()
-    })
-    winston.debug(' Current number of Tasks: %d', this.numTask)
-
-    const respMsg = [reqAddress, delimiter]
-    const objWork = JSON.parse(payload.toString())
-    winston.debug('\tReceived payload\n', objWork)
-
-    if (this.isFull()) {
-      winston.debug(' The queue is full, We will reject the task')
-      respMsg[2] = 'rejected'
-    } else {
-      this.increaseTask()
-      winston.debug(' The queue is not full, We will receive the task')
-      winston.debug('   Current number of Tasks: %d', this.numTask)
-      try {
-        const resp = await this.queueInst.createMessage(objWork)
-        winston.debug('   New Task is created with ID:\n', resp.toString())
-        respMsg[2] = 'received'
-      } catch (e) {
-        this.decreaseTask()
-        winston.debug('   Create Task Error\n', e.toString())
-      }
-    }
-
-    winston.debug('  Send response\n', {
-      respAddress: respMsg[0].toString('hex'),
-      delimiter: respMsg[1].toString(),
-      respPayload: respMsg[2]
-    })
-
-    return this.frontend.send(respMsg)
+  reject (): mixed {
+    winston.debug(' The queue is full, We will reject the task')
+    return 'rejected'
   }
 
-  async dispatchTask (...reqMsg) {
-    // Note that separate message parts come as function arguments.
-    const [reqAddress, delimiter, payload] = reqMsg
+  async receive (payload : mixed): mixed {
+    this.increaseTask()
+    winston.debug(' The queue is not full, We will receive the task')
+    winston.debug('   Current number of Tasks: %d', this.numTask)
+    try {
+      const resp = await this.queueInst.createMessage(payload)
+      winston.debug('   New Task is created with ID:\n', resp.toString())
+      return 'received'
+    } catch (e) {
+      this.decreaseTask()
+      winston.debug('   Create Task Error\n', e.toString())
+      return 'rejected'
+    }
+  }
 
-    winston.debug('Backend received req with info\n', {
-      reqAddress: reqAddress.toString('hex'),
-      delimiter: reqAddress.toString()
+  _frontEndSend (respMsg : Array<mixed>) : void {
+    let [respAddress, delimiter, payload] = respMsg
+    payload = payload || ''
+    payload = JSON.stringify(payload)
+    winston.debug('  Frontend send response\n', {
+      clientAddress: (respAddress && (typeof respAddress === 'object')) ? respAddress.toString() : respAddress,
+      delimiter: (delimiter && (typeof delimiter === 'object')) ? delimiter.toString() : delimiter,
+      payload: payload
     })
+    this.frontend.send([respAddress, delimiter, payload])
+  }
 
+  _backEndSend (respMsg : Array<mixed>) : void {
+    let [respAddress, delimiter, payload] = respMsg
+    payload = payload || ''
+    payload = JSON.stringify(payload)
+    winston.debug('  Backend send response\n', {
+      workerAddress: (respAddress && (typeof respAddress === 'object')) ? respAddress.toString() : respAddress,
+      delimiter: (delimiter && (typeof delimiter === 'object')) ? delimiter.toString() : delimiter,
+      payload: payload
+    })
+    this.backend.send([respAddress, delimiter, payload])
+  }
+
+  async receiveTask (reqAddress: mixed, delimiter: mixed, payload: mixed) {
     const respMsg = [reqAddress, delimiter]
-    const objResult = JSON.parse(payload.toString())
-    winston.debug('\tReceived Result\n', objResult)
+    if (this.isFull()) {
+      respMsg[2] = this.reject()
+    } else {
+      respMsg[2] = await this.receive(payload)
+    }
+    return this._frontEndSend(respMsg)
+  }
 
-    if (objResult && objResult.message && objResult.message.result) {
-      const newMsg = await this.queueInst.updateMessage(objResult)
+  async dispatchTask (reqAddress: mixed, delimiter: mixed, payload: mixed) {
+    const respMsg = [reqAddress, delimiter]
+    if (payload && payload.message && payload.message.result) {
+      const newMsg = await this.queueInst.updateMessage(payload)
       winston.debug('  Update task with result\n', newMsg.toString())
     }
-
-    let getMsg = await this.queueInst.getMessage()
-    getMsg = getMsg || ''
-    respMsg[2] = JSON.stringify(getMsg)
-
-    winston.debug('  Send work\n', {
-      respAddress: respMsg[0].toString('hex'),
-      delimiter: respMsg[1].toString(),
-      respPayload: respMsg[2]
-    })
-
-    return this.backend.send(respMsg)
+    respMsg[2] = await this.queueInst.getMessage()
+    return this._backEndSend(respMsg)
   }
 }

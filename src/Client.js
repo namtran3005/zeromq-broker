@@ -3,9 +3,11 @@ import zeromq from 'zeromq'
 
 export default class Client {
   queueUrl: string;
+  onMessage: (payload: any) => any;
+  requester: any;
   constructor (options: {
     queueUrl: string,
-    onMessage: (msg: mixed) => string,
+    onMessage: (msg: mixed) => any,
   }) {
     const {
       queueUrl,
@@ -19,7 +21,7 @@ export default class Client {
     this.requester = zeromq.socket('req')
     this.requester.connect(this.queueUrl)
     this.requester.setsockopt('linger', 0)
-    this.requester.on('message', this.onMessage.bind(this))
+    this.requester.on('message', (payload) => this.onMessage(JSON.parse(payload.toString())))
     return this
   }
 
@@ -27,7 +29,7 @@ export default class Client {
     return this.requester.close()
   }
 
-  send (payload) {
+  send (payload: any) {
     this.requester.send(JSON.stringify(payload))
   }
 }

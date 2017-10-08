@@ -65,12 +65,8 @@ test('Initiate another Broker instance should success', async () => {
 test('An client can create a task', async (done) => {
   const brokerInstance = await setup()
   const mockFn = jest.fn().mockImplementation((msg) => {
-    let strMsg = ''
-    if (typeof msg === 'object' && msg) {
-      strMsg = msg.toString() // Works!
-    }
-    expect(strMsg).toBe('received')
-    return strMsg
+    expect(msg).toBe('received')
+    return msg
   })
 
   const clientInst = await new Client({
@@ -99,16 +95,12 @@ test('An client can\'t create a task when the queue is full', async (done) => {
   let numReceived = 0
   let numReject = 0
   const mockFn = jest.fn().mockImplementation((msg, i) => {
-    let strMsg = ''
-    if (typeof msg === 'object' && msg) {
-      strMsg = msg.toString() // Works!
-    }
-    if (strMsg === 'rejected') {
+    if (msg === 'rejected') {
       numReject += 1
-    } else if (strMsg === 'received') {
+    } else if (msg === 'received') {
       numReceived += 1
     }
-    return strMsg
+    return msg
   })
 
   let arrClients = []
@@ -161,11 +153,7 @@ test('A broker Instance after recover should get correct current numTask', async
 
   let totalClient = 0
   const mockFn = jest.fn().mockImplementation((msg, i) => {
-    let strMsg = ''
-    if (typeof msg === 'object' && msg) {
-      strMsg = msg.toString() // Works!
-    }
-    return strMsg
+    return msg
   })
   let arrPromises = []
   let arrClients = []
@@ -204,19 +192,12 @@ test('A Client send a task and worker received', async (done) => {
   })
 
   const mockClientFn = jest.fn().mockImplementation((msg, i) => {
-    let strMsg = ''
-    if (typeof msg === 'object' && msg) {
-      strMsg = msg.toString() // Works!
-    }
-    return strMsg
+    return msg
   })
 
   let myFingerPrint = null
   const mockWorkerFn = jest.fn().mockImplementation(async function workerHander (msg) {
-    let objWork = ''
-    if (typeof msg === 'object' && msg) {
-      objWork = JSON.parse(msg.toString())
-    }
+    let objWork: any = msg
     winston.debug('Worker receive works \n', objWork)
     /* sample do work */
     if (objWork && objWork.message) {
