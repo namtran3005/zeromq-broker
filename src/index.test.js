@@ -62,11 +62,14 @@ test('Initiate another Broker instance should success', async () => {
   await teardown(brokerInstance)
 })
 
-test('An client can create a task', async (done) => {
+test('An client can create a task successfully', async (done) => {
   const brokerInstance = await setup()
   const mockFn = jest.fn().mockImplementation((msg) => {
     expect(msg).toBe('received')
-    return msg
+    expect(mockFn).toHaveBeenCalledTimes(1)
+    expect(brokerInstance.numTask).toBe(1)
+    clientInst.deinit()
+    teardown(brokerInstance).then(done)
   })
 
   const clientInst = await new Client({
@@ -78,12 +81,30 @@ test('An client can create a task', async (done) => {
     type: 'task',
     params: [Math.random()]
   })
+})
 
-  setTimeout(() => {
+test('An client can fails to create a task', async (done) => {
+  const brokerInstance = await setup()
+  brokerInstance.queueInst.createMessage = () => {
+    throw new Error('error')
+  }
+  const mockFn = jest.fn().mockImplementation((msg) => {
+    expect(msg).toBe('rejected')
     expect(mockFn).toHaveBeenCalledTimes(1)
+    expect(brokerInstance.numTask).toBe(0)
     clientInst.deinit()
     teardown(brokerInstance).then(done)
-  }, 2000)
+  })
+
+  const clientInst = await new Client({
+    queueUrl: 'tcp://localhost:5551',
+    onMessage: mockFn
+  }).init()
+
+  clientInst.send({
+    type: 'task',
+    params: [Math.random()]
+  })
 })
 
 test('An client can\'t create a task when the queue is full', async (done) => {
