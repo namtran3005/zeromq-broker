@@ -1,6 +1,6 @@
 {
   "name": "zeromq-broker",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "A Simple Broker",
   "main": "lib/index.js",
   "jsnext:main": "lib/index.js",
