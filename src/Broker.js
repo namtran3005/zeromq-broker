@@ -132,7 +132,6 @@ export default class Broker {
 
   _frontEndSend (respMsg : Array<mixed>) : void {
     let [respAddress, delimiter, payload] = respMsg
-    payload = payload || ''
     payload = JSON.stringify(payload)
     winston.debug('  Frontend send response\n', {
       clientAddress: (respAddress && (typeof respAddress === 'object')) ? respAddress.toString() : respAddress,
@@ -144,7 +143,6 @@ export default class Broker {
 
   _backEndSend (respMsg : Array<mixed>) : void {
     let [respAddress, delimiter, payload] = respMsg
-    payload = payload || ''
     payload = JSON.stringify(payload)
     winston.debug('  Backend send response\n', {
       workerAddress: (respAddress && (typeof respAddress === 'object')) ? respAddress.toString() : respAddress,
