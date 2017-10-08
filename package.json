@@ -15,7 +15,7 @@
   "license": "MIT",
   "dependencies": {
     "bluebird": "^3.5.0",
-    "mongo-message": "^0.0.8",
+    "mongo-message": "^0.0.9",
     "mongoose": "^4.11.10",
     "uuid": "^3.1.0",
     "winston": "^2.3.1",

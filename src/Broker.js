@@ -81,6 +81,18 @@ export default class Broker {
     return this
   }
 
+  isFull (): boolean {
+    return this.numTask >= this.maxQueue
+  }
+
+  increaseTask (): void {
+    this.numTask = this.numTask + 1
+  }
+
+  decreaseTask (): void {
+    this.numTask = this.numTask - 1
+  }
+
   async receiveTask (...reqMsg) {
     // Note that separate message parts come as function arguments.
     const [reqAddress, delimiter, payload] = reqMsg
@@ -95,16 +107,21 @@ export default class Broker {
     const objWork = JSON.parse(payload.toString())
     winston.debug('\tReceived payload\n', objWork)
 
-    if (this.numTask >= this.maxQueue) {
+    if (this.isFull()) {
       winston.debug(' The queue is full, We will reject the task')
       respMsg[2] = 'rejected'
     } else {
-      this.numTask = this.numTask + 1
+      this.increaseTask()
       winston.debug(' The queue is not full, We will receive the task')
       winston.debug('   Current number of Tasks: %d', this.numTask)
-      const resp = await this.queueInst.createMessage(objWork)
-      winston.debug('   New Task is created with ID:\n', resp.toString())
-      respMsg[2] = 'received'
+      try {
+        const resp = await this.queueInst.createMessage(objWork)
+        winston.debug('   New Task is created with ID:\n', resp.toString())
+        respMsg[2] = 'received'
+      } catch (e) {
+        this.decreaseTask()
+        winston.debug('   Create Task Error\n', e.toString())
+      }
     }
 
     winston.debug('  Send response\n', {
