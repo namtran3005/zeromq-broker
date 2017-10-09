@@ -101,7 +101,7 @@ export default class Broker {
     return isFull
   }
 
-  increaseTask (): void {
+  _increaseTask (): void {
     const after = this.numTask + 1
     winston.debug(` increaseTask \n %j`, {
       'before': this.numTask,
@@ -110,7 +110,7 @@ export default class Broker {
     this.numTask = after
   }
 
-  decreaseTask (): void {
+  _decreaseTask (): void {
     const after = this.numTask - 1
     winston.debug(` decreaseTask \n %j`, {
       'before': this.numTask,
@@ -119,28 +119,44 @@ export default class Broker {
     this.numTask = after
   }
 
-  reject (): mixed {
+  _reject (): mixed {
     return 'rejected'
   }
 
-  async insertTask (payload : mixed) : mixed {
+  async _insertTask (payload : mixed) : mixed {
     let resp = null
     try {
       winston.debug('   Broker insert task with payload:\n %j', payload)
       resp = await this.queueInst.createMessage(payload)
-      winston.debug('   Broker inserted task successfully with ID:\n', resp.toString())
+      winston.debug('   Broker inserted task successfully with ID:\n', JSON.stringify(resp))
     } catch (e) {
-      winston.debug('   Broker inserted task fails with error:\n', e.toString())
+      winston.debug('   Broker inserted task fails with error:\n', JSON.stringify(e))
     }
     return resp
   }
 
-  async receive (payload : mixed): mixed {
+  async _updateTask (payload : mixed) : mixed {
+    let resp = null
+    try {
+      winston.debug('   Broker update task with payload:\n %j', payload)
+      resp = await this.queueInst.updateMessage(payload)
+      if (resp) {
+        winston.debug('   Broker update task successfully with ID:\n', JSON.stringify(resp))
+      } else {
+        throw Error('Fail to update task')
+      }
+    } catch (e) {
+      winston.debug('   Broker update task fails with error:\n', JSON.stringify(e))
+    }
+    return resp
+  }
+
+  async _receive (payload : mixed): mixed {
     let respMsg = 'received'
-    this.increaseTask()
-    let newTask = await this.insertTask(payload)
+    this._increaseTask()
+    let newTask = await this._insertTask(payload)
     if (!newTask) {
-      this.decreaseTask()
+      this._decreaseTask()
       respMsg = 'rejected'
     }
     return respMsg
@@ -160,9 +176,9 @@ export default class Broker {
   async receiveTask (reqAddress: mixed, delimiter: mixed, payload: mixed) {
     const respMsg = [reqAddress, delimiter]
     if (this.isFull()) {
-      respMsg[2] = this.reject()
+      respMsg[2] = this._reject()
     } else {
-      respMsg[2] = await this.receive(payload)
+      respMsg[2] = await this._receive(payload)
     }
     winston.debug('  Frontend send response')
     return this._sendResp(respMsg, this.frontend)
@@ -171,8 +187,7 @@ export default class Broker {
   async dispatchTask (reqAddress: mixed, delimiter: mixed, payload: mixed) {
     const respMsg = [reqAddress, delimiter]
     if (payload && payload.message && payload.message.result) {
-      const newMsg = await this.queueInst.updateMessage(payload)
-      winston.debug('  Update task with result\n', newMsg.toString())
+      await this._updateTask(payload)
     }
     respMsg[2] = await this.queueInst.getMessage()
     winston.debug('  Backend send response')
