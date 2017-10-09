@@ -2,53 +2,11 @@
 import Promise from 'bluebird'
 import winston from 'winston'
 import MongoSMQ from 'mongo-message'
-import Broker from './Broker'
-import Client from './Client'
+import {repeatIn, getRandomInt, setup, teardown} from '../utils'
+import Client from '../src/Client'
 
 winston.level = 'debug'
 jasmine.DEFAULT_TIMEOUT_INTERVAL = 60000
-
-const repeatIn = (ms: number, interval: number, cb: Function) => {
-  let countDown = ms
-  return new Promise((resolve) => {
-    const timerId = setInterval(async () => {
-      if (countDown === 0) {
-        clearTimeout(timerId)
-        resolve()
-        return
-      }
-      await cb()
-      countDown -= interval
-    }, interval)
-  })
-}
-
-const sleep = ms => repeatIn(ms, ms, () => {})
-
-/**
- * Returns a random integer between min (inclusive) and max (inclusive)
- * Using Math.round() will give you a non-uniform distribution!
- */
-function getRandomInt (min, max) {
-  return Math.floor(Math.random() * ((max - min) + 1)) + min
-}
-
-async function setup (options) {
-  const opts = Object.assign({}, {
-    queueName: 'queue1',
-    nextDest: 'nextBroker',
-    frontPort: 5551,
-    backPort: 5552,
-    maxQueue: 10
-  }, options)
-  const fixtures = await (new Broker(opts)).initBroker()
-  return fixtures
-}
-
-async function teardown (fixtures) {
-  return fixtures.cleanQueue().then(() => fixtures.deInitBroker())
-    .then(() => sleep(888))
-}
 
 test('Initiate new Broker instance', async () => {
   const brokerInstance = await setup()
