@@ -47,7 +47,7 @@ async function setup (options) {
 
 async function teardown (fixtures) {
   return fixtures.cleanQueue().then(() => fixtures.deInitBroker())
-    .then(() => sleep(800))
+    .then(() => sleep(888))
 }
 
 test('Initiate new Broker instance', async () => {

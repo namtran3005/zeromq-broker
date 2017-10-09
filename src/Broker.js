@@ -3,8 +3,6 @@ import winston from 'winston'
 import zeromq from 'zeromq'
 import MongoSMQ from 'mongo-message'
 
-winston.level = 'debug'
-
 export default class Broker {
   numTask: number;
   maxQueue: number;
@@ -70,7 +68,6 @@ export default class Broker {
         delimiter: delimiter.toString(),
         payload: parsed
       })
-      winston.debug(' Current number of Tasks: %d', this.numTask)
       this.receiveTask(reqAddress, delimiter, parsed)
     })
     this.backend.on('message', (...reqMsg) => {
@@ -99,57 +96,65 @@ export default class Broker {
   }
 
   isFull (): boolean {
-    return this.numTask >= this.maxQueue
+    const isFull = this.numTask >= this.maxQueue
+    winston.debug(` The queue (${this.queueName}) is${isFull ? '' : "n't"} full`)
+    return isFull
   }
 
   increaseTask (): void {
-    this.numTask = this.numTask + 1
+    const after = this.numTask + 1
+    winston.debug(` increaseTask \n %j`, {
+      'before': this.numTask,
+      'after': after
+    })
+    this.numTask = after
   }
 
   decreaseTask (): void {
-    this.numTask = this.numTask - 1
+    const after = this.numTask - 1
+    winston.debug(` decreaseTask \n %j`, {
+      'before': this.numTask,
+      'after': after
+    })
+    this.numTask = after
   }
 
   reject (): mixed {
-    winston.debug(' The queue is full, We will reject the task')
     return 'rejected'
   }
 
-  async receive (payload : mixed): mixed {
-    this.increaseTask()
-    winston.debug(' The queue is not full, We will receive the task')
-    winston.debug('   Current number of Tasks: %d', this.numTask)
+  async insertTask (payload : mixed) : mixed {
+    let resp = null
     try {
-      const resp = await this.queueInst.createMessage(payload)
-      winston.debug('   New Task is created with ID:\n', resp.toString())
-      return 'received'
+      winston.debug('   Broker insert task with payload:\n %j', payload)
+      resp = await this.queueInst.createMessage(payload)
+      winston.debug('   Broker inserted task successfully with ID:\n', resp.toString())
     } catch (e) {
-      this.decreaseTask()
-      winston.debug('   Create Task Error\n', e.toString())
-      return 'rejected'
+      winston.debug('   Broker inserted task fails with error:\n', e.toString())
     }
+    return resp
   }
 
-  _frontEndSend (respMsg : Array<mixed>) : void {
+  async receive (payload : mixed): mixed {
+    let respMsg = 'received'
+    this.increaseTask()
+    let newTask = await this.insertTask(payload)
+    if (!newTask) {
+      this.decreaseTask()
+      respMsg = 'rejected'
+    }
+    return respMsg
+  }
+
+  _sendResp (respMsg : Array<mixed>, socket : any) : void {
     let [respAddress, delimiter, payload] = respMsg
     payload = JSON.stringify(payload)
-    winston.debug('  Frontend send response\n', {
-      clientAddress: (respAddress && (typeof respAddress === 'object')) ? respAddress.toString() : respAddress,
+    winston.debug('%j', {
+      clientAddress: (respAddress && (typeof respAddress === 'object')) ? respAddress.toString('hex') : respAddress,
       delimiter: (delimiter && (typeof delimiter === 'object')) ? delimiter.toString() : delimiter,
       payload: payload
     })
-    this.frontend.send([respAddress, delimiter, payload])
-  }
-
-  _backEndSend (respMsg : Array<mixed>) : void {
-    let [respAddress, delimiter, payload] = respMsg
-    payload = JSON.stringify(payload)
-    winston.debug('  Backend send response\n', {
-      workerAddress: (respAddress && (typeof respAddress === 'object')) ? respAddress.toString() : respAddress,
-      delimiter: (delimiter && (typeof delimiter === 'object')) ? delimiter.toString() : delimiter,
-      payload: payload
-    })
-    this.backend.send([respAddress, delimiter, payload])
+    socket.send([respAddress, delimiter, payload])
   }
 
   async receiveTask (reqAddress: mixed, delimiter: mixed, payload: mixed) {
@@ -159,7 +164,8 @@ export default class Broker {
     } else {
       respMsg[2] = await this.receive(payload)
     }
-    return this._frontEndSend(respMsg)
+    winston.debug('  Frontend send response')
+    return this._sendResp(respMsg, this.frontend)
   }
 
   async dispatchTask (reqAddress: mixed, delimiter: mixed, payload: mixed) {
@@ -169,6 +175,7 @@ export default class Broker {
       winston.debug('  Update task with result\n', newMsg.toString())
     }
     respMsg[2] = await this.queueInst.getMessage()
-    return this._backEndSend(respMsg)
+    winston.debug('  Backend send response')
+    return this._sendResp(respMsg, this.backend)
   }
 }
