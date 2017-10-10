@@ -12,7 +12,7 @@ let _currentFile = path.basename(__filename, '.test.js')
 const currentConfig = config[_currentFile]
 
 test('An client can\'t create a task when the queue is full', async (done) => {
-  let intMax = getRandomInt(1, 20)
+  let intMax = getRandomInt(1, 15)
   let intReject = getRandomInt(1, 5)
   const brokerInstance = await setup({
     ...currentConfig,
