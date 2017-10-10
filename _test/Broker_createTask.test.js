@@ -11,6 +11,13 @@ jasmine.DEFAULT_TIMEOUT_INTERVAL = 60000
 let _currentFile = path.basename(__filename, '.test.js')
 const currentConfig = config[_currentFile]
 
+function initClient (frontPort, onMessage) {
+  return new Client({
+    queueUrl: `tcp://localhost:${frontPort}`,
+    onMessage: onMessage
+  }).init()
+}
+
 test('An client can create a task successfully', async (done) => {
   const brokerInstance = await setup(currentConfig)
   const mockFn = jest.fn().mockImplementation((msg) => {
@@ -21,10 +28,7 @@ test('An client can create a task successfully', async (done) => {
     teardown(brokerInstance).then(done)
   })
 
-  const clientInst = await new Client({
-    queueUrl: `tcp://localhost:${currentConfig.frontPort}`,
-    onMessage: mockFn
-  }).init()
+  const clientInst = await initClient(currentConfig.frontPort, mockFn)
 
   clientInst.send({
     type: 'task',
@@ -45,10 +49,7 @@ test('An client can fails to create a task', async (done) => {
     teardown(brokerInstance).then(done)
   })
 
-  const clientInst = await new Client({
-    queueUrl: `tcp://localhost:${currentConfig.frontPort}`,
-    onMessage: mockFn
-  }).init()
+  const clientInst = await initClient(currentConfig.frontPort, mockFn)
 
   clientInst.send({
     type: 'task',
