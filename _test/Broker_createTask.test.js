@@ -38,9 +38,9 @@ test('An client can fails to create a task', async (done) => {
     throw new Error('error')
   }
   const mockFn = jest.fn().mockImplementation((msg) => {
-    expect(msg).toBe('rejected')
-    expect(mockFn).toHaveBeenCalledTimes(1)
     expect(brokerInstance.numTask).toBe(0)
+    expect(mockFn).toHaveBeenCalledTimes(1)
+    expect(msg).toBe('rejected')
     clientInst.deinit()
     teardown(brokerInstance).then(done)
   })
