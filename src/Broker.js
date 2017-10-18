@@ -135,11 +135,40 @@ export default class Broker {
     return resp
   }
 
+  _checkObjResult(payload: mixed) : { 
+    _id : string,
+    tries : number,
+    message : { result : mixed } 
+  } | void {
+    let updateParam
+    if (payload &&
+        payload._id && typeof payload._id === "string" &&
+        payload.tries && typeof payload.tries === "number" &&
+        payload.message && payload.message.result
+    ) {
+      let _id = payload._id
+      let tries = payload.tries
+      let result = payload.message.result
+      updateParam = {
+        _id,
+        tries,
+        message : {
+          result : result
+        }
+      }
+    }
+    return updateParam
+  }
+  
   async _updateTask (payload : mixed) : mixed {
-    let resp = null
+    let resp
     try {
       winston.debug('   Broker update task with payload:\n %j', payload)
-      resp = await this.queueInst.updateMessage(payload)
+      let updateParam = this._checkObjResult(payload)
+      if (!updateParam) {
+        throw Error('Update params Invalid')        
+      }
+      resp = await this.queueInst.updateMessage(updateParam)
       if (resp) {
         winston.debug('   Broker update task successfully with ID:\n', JSON.stringify(resp))
       } else {
