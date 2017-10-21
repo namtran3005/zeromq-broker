@@ -32,13 +32,15 @@ export default {
     nextDest: 'nextBroker',
     frontPort: 5561,
     backPort: 5562,
-    maxQueue: 10
+    maxQueue: 10,
+    doneDef: {}
   },
   'Broker_update': {
     queueName: 'Broker_update',
     nextDest: 'nextBroker',
     frontPort: 5563,
     backPort: 5564,
-    maxQueue: 10
+    maxQueue: 10,
+    doneDef: {}
   }
 }

@@ -14,6 +14,7 @@ export default class Broker {
   queueInst: MongoSMQ;
   frontend : any;
   backend : any;
+  doneDef: any;
 
   constructor (options: {
     queueName: string,
@@ -22,9 +23,10 @@ export default class Broker {
     frontPort: number,
     backPort: number,
     maxQueue: number,
+    doneDef : any
   }) {
     const {
-      queueName, visibility, nextDest, frontPort, backPort, maxQueue
+      queueName, visibility, nextDest, frontPort, backPort, maxQueue, doneDef
     } = options
     this.numTask = 0
     this.maxQueue = maxQueue
@@ -33,6 +35,7 @@ export default class Broker {
     this.frontPort = frontPort
     this.backPort = backPort
     this.visibility = visibility || 30
+    this.doneDef = doneDef || { 'message.result': { exists: false } }
   }
 
   async initQueue (): Promise<Broker> {
@@ -222,7 +225,7 @@ export default class Broker {
     if (payload && payload.message && payload.message.result) {
       await this._updateTask(payload)
     }
-    respMsg[2] = await this.queueInst.getMessage()
+    respMsg[2] = await this.queueInst.getMessage(this.doneDef)
     winston.debug('  Backend send response')
     return this._sendResp(respMsg, this.backend)
   }
