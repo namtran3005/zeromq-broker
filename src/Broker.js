@@ -15,6 +15,7 @@ export default class Broker {
   frontend : any;
   backend : any;
   doneDef: any;
+  notDoneDef : any;
 
   constructor (options: {
     queueName: string,
@@ -35,7 +36,8 @@ export default class Broker {
     this.frontPort = frontPort
     this.backPort = backPort
     this.visibility = visibility || 30
-    this.doneDef = doneDef || { 'message.result': { exists: false } }
+    this.doneDef = doneDef || { 'message.result': { $exists: true } }
+    this.notDoneDef = { $nor: [this.doneDef] }
   }
 
   async initQueue (): Promise<Broker> {
@@ -225,7 +227,7 @@ export default class Broker {
     if (payload && payload.message && payload.message.result) {
       await this._updateTask(payload)
     }
-    respMsg[2] = await this.queueInst.getMessage(this.doneDef)
+    respMsg[2] = await this.queueInst.getMessage(this.notDoneDef)
     winston.debug('  Backend send response')
     return this._sendResp(respMsg, this.backend)
   }

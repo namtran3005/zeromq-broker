@@ -33,7 +33,7 @@ export default {
     frontPort: 5561,
     backPort: 5562,
     maxQueue: 10,
-    doneDef: {}
+    doneDef: { 'neverDone': true }
   },
   'Broker_update': {
     queueName: 'Broker_update',
@@ -41,6 +41,13 @@ export default {
     frontPort: 5563,
     backPort: 5564,
     maxQueue: 10,
-    doneDef: {}
+    doneDef: { 'neverDone': true }
+  },
+  'Broker_setDone': {
+    queueName: 'Broker_setDone',
+    nextDest: 'nextBroker',
+    frontPort: 5565,
+    backPort: 5566,
+    maxQueue: 10
   }
 }
