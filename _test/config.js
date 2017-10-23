@@ -17,7 +17,6 @@ export default {
   'Broker_rejectTask': {
     queueName: 'Broker_rejectTask',
     nextDest: 'nextBroker',
-    clientType: 'dealer',
     frontPort: 5557,
     backPort: 5558,
     maxQueue: 10
