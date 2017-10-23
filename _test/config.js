@@ -54,5 +54,13 @@ export default {
     frontPort: 5565,
     backPort: 5566,
     maxQueue: 10
+  },
+  'Broker_updateBadRep': {
+    queueName: 'Broker_updateBadRep',
+    nextDest: 'nextBroker',
+    clientType: 'req',
+    frontPort: 5567,
+    backPort: 5568,
+    maxQueue: 10
   }
 }

@@ -168,7 +168,7 @@ export default class Broker {
       winston.debug('   Broker update task with payload:\n %j', payload)
       let updateParam = this._checkObjResult(payload)
       if (updateParam == null) {
-        throw Error('Update params Invalid')
+        throw Error('Update payload is invalid')
       } else {
         resp = await this.queueInst.updateMessage({
           _id: updateParam._id,
@@ -181,10 +181,10 @@ export default class Broker {
       if (resp) {
         winston.debug('   Broker update task successfully with ID:\n', JSON.stringify(resp))
       } else {
-        throw Error('Fail to update task')
+        throw Error('Fails to update task')
       }
     } catch (e) {
-      winston.debug('   Broker update task fails with error:\n', JSON.stringify(e))
+      winston.debug('   Broker update task fails with error:\n', e.message)
     }
     return resp
   }
@@ -224,9 +224,7 @@ export default class Broker {
 
   async dispatchTask (reqAddress: mixed, delimiter: mixed, payload: mixed) {
     const respMsg = [reqAddress, delimiter]
-    if (payload && payload.message && payload.message.result) {
-      await this._updateTask(payload)
-    }
+    await this._updateTask(payload)
     respMsg[2] = await this.queueInst.getMessage(this.notDoneDef)
     winston.debug('  Backend send response')
     return this._sendResp(respMsg, this.backend)

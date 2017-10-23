@@ -10,46 +10,40 @@ jasmine.DEFAULT_TIMEOUT_INTERVAL = 60000
 let _currentFile = path.basename(__filename, '.test.js')
 const currentConfig = config[_currentFile]
 
-test('The done task should not available again', async (done) => {
+test('Return a wrong payload cause broker fails to update', async (done) => {
   const intMax = 10
   let brokerInstance = await setup({
     ...currentConfig,
     ...{
       maxQueue: intMax,
-      visibility: 1
+      visibility: 5
     }
   })
-  let intTries = 0
-  let intHasMessage = 0
-  let intNoMessage = 0
+
   const mockClientFn = jest.fn().mockImplementation((msg, i) => {
     return msg
   })
 
   let myFingerPrint = null
-  const mockWorkerFn = jest.fn().mockImplementation(async function workerHandler (msg) {
+  const mockWorkerFn = jest.fn().mockImplementation(async function workerHander (msg) {
     let objWork: any = msg
     winston.debug('Worker receive works \n', objWork)
     /* sample do work */
-    if (intTries === 5) {
-      expect(intHasMessage).toBe(1)
-      expect(intNoMessage).toBe(intTries - intHasMessage)
-      clientInst.deinit()
-      workerInst.deinit()
-      return teardown(brokerInstance).then(done)
-    } else {
-      intTries += 1
-      if (objWork && objWork.message) {
-        intHasMessage += 1
-        myFingerPrint = `Work done Id: ${Math.random()}`
-        objWork.message.result = myFingerPrint
-      } else {
-        intNoMessage += 1
-        /* backoff before request new one */
-        await repeatIn(1000, 1000, () => {})
+    if (objWork && objWork.message) {
+      if (objWork.tries === 2) {
+        /* eventualy it will try a second time comback here */
+        expect(objWork.message.params[0]).toBe(myFingerPrint)
+        clientInst.deinit()
+        workerInst.deinit()
+        return teardown(brokerInstance).then(done)
       }
+      await repeatIn(1000, 1000, () => {})
+      myFingerPrint = objWork.message.params[0]
+    } else {
+      /* backoff before request new one */
+      await repeatIn(1000, 1000, () => {})
     }
-
+    objWork = null
     return this.send(objWork)
   })
 
@@ -70,5 +64,5 @@ test('The done task should not available again', async (done) => {
     params: [Math.random()]
   })
 
-  workerInst.send(null)
+  workerInst.send('')
 })
