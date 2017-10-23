@@ -1,7 +1,6 @@
 /* @flow */
 import winston from 'winston'
-import Client from '../src/Client'
-import {setup, teardown, repeatIn} from '../utils'
+import {setup, teardown, repeatIn, initClient} from '../utils'
 import path from 'path'
 import config from './config'
 
@@ -30,10 +29,11 @@ test('A Broker instance after recover should get correct current numTask', async
     for (let i = 0; i < numClient; i += 1) {
       const numId = totalClient
       totalClient += 1
-      const client = await (new Client({
-        queueUrl: `tcp://localhost:${currentConfig.frontPort}`,
+      const client = await initClient({
+        port: currentConfig.frontPort,
+        socketType: currentConfig.clientType,
         onMessage: msg => mockFn(msg, numId)
-      })).init()
+      })
       client.send({
         type: 'task',
         params: [Math.random()]

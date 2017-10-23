@@ -1,7 +1,6 @@
 /* @flow */
 import winston from 'winston'
-import Client from '../src/Client'
-import {setup, teardown, getRandomInt} from '../utils'
+import {setup, teardown, getRandomInt, initClient} from '../utils'
 import path from 'path'
 import config from './config'
 
@@ -31,10 +30,11 @@ test('An client can\'t create a task when the queue is full', async (done) => {
 
   let arrClients = []
   for (let i = 0; i < intMax + intReject; i += 1) {
-    arrClients.push(new Client({
-      queueUrl: `tcp://localhost:${currentConfig.frontPort}`,
+    arrClients.push(initClient({
+      port: currentConfig.frontPort,
+      socketType: currentConfig.clientType,
       onMessage: msg => mockFn(msg, i)
-    }).init())
+    }))
   }
   arrClients = await Promise.all(arrClients)
 

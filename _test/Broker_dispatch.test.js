@@ -1,7 +1,6 @@
 /* @flow */
 import winston from 'winston'
-import Client from '../src/Client'
-import {setup, teardown, repeatIn} from '../utils'
+import {setup, teardown, sleep, initClient} from '../utils'
 import path from 'path'
 import config from './config'
 
@@ -37,25 +36,27 @@ test('A Client send a task and worker received', async (done) => {
         workerInst.deinit()
         return teardown(brokerInstance).then(done)
       }
-      await repeatIn(1000, 1000, () => {})
+      await sleep(1000)
       myFingerPrint = `Work done Id: ${Math.random()}`
       objWork.message.result = myFingerPrint
     } else {
       /* backoff before request new one */
-      await repeatIn(1000, 1000, () => {})
+      await sleep(1000)
     }
     return this.send(objWork)
   })
 
-  let clientInst = await new Client({
-    queueUrl: `tcp://localhost:${currentConfig.frontPort}`,
+  const clientInst = await initClient({
+    port: currentConfig.frontPort,
+    socketType: currentConfig.clientType,
     onMessage: mockClientFn
-  }).init()
+  })
 
-  let workerInst = await new Client({
-    queueUrl: `tcp://localhost:${currentConfig.backPort}`,
+  const workerInst = await initClient({
+    port: currentConfig.backPort,
+    socketType: currentConfig.clientType,
     onMessage: mockWorkerFn
-  }).init()
+  })
 
   clientInst.send({
     type: 'task',

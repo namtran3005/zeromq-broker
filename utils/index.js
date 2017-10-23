@@ -1,5 +1,7 @@
+/* @flow */
 import Promise from 'bluebird'
 import Broker from '../src/Broker'
+import Client from '../src/Client'
 
 export const repeatIn = (ms: number, interval: number, cb: Function) => {
   let countDown = ms
@@ -40,4 +42,17 @@ export async function setup (options) {
 export async function teardown (fixtures) {
   return fixtures.cleanQueue().then(() => fixtures.deInitBroker())
     .then(() => sleep(888))
+}
+
+export function initClient ({hostname, port, socketType, onMessage}: {
+  hostname?: ?string,
+  port: number,
+  socketType?: ?string,
+  onMessage: (payload: any) => any
+}) {
+  return new Client({
+    queueUrl: `tcp://${hostname || 'localhost'}:${port}`,
+    onMessage: onMessage,
+    type: socketType
+  }).init()
 }

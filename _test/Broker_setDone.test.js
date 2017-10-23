@@ -1,7 +1,6 @@
 /* @flow */
 import winston from 'winston'
-import Client from '../src/Client'
-import {setup, teardown, repeatIn} from '../utils'
+import {setup, teardown, repeatIn, initClient} from '../utils'
 import path from 'path'
 import config from './config'
 
@@ -54,20 +53,22 @@ test('The done task should not available again', async (done) => {
     return this.send(objWork)
   })
 
-  let clientInst = await new Client({
-    queueUrl: `tcp://localhost:${currentConfig.frontPort}`,
+  let clientInst = await initClient({
+    port: currentConfig.frontPort,
+    socketType: currentConfig.clientType,
     onMessage: mockClientFn
-  }).init()
+  })
 
-  let workerInst = await new Client({
-    queueUrl: `tcp://localhost:${currentConfig.backPort}`,
+  let workerInst = await initClient({
+    port: currentConfig.backPort,
+    socketType: currentConfig.clientType,
     onMessage: mockWorkerFn
-  }).init()
+  })
 
   clientInst.send({
     type: 'task',
     params: [Math.random()]
   })
 
-  workerInst.send('')
+  workerInst.send(null)
 })

@@ -1,7 +1,6 @@
 /* @flow */
 import winston from 'winston'
-import Client from '../src/Client'
-import {setup, teardown} from '../utils'
+import {setup, teardown, initClient} from '../utils'
 import path from 'path'
 import config from './config'
 
@@ -10,13 +9,6 @@ jasmine.DEFAULT_TIMEOUT_INTERVAL = 60000
 
 let _currentFile = path.basename(__filename, '.test.js')
 const currentConfig = config[_currentFile]
-
-function initClient (frontPort, onMessage) {
-  return new Client({
-    queueUrl: `tcp://localhost:${frontPort}`,
-    onMessage: onMessage
-  }).init()
-}
 
 test('An client can create a task successfully', async (done) => {
   const brokerInstance = await setup(currentConfig)
@@ -28,7 +20,11 @@ test('An client can create a task successfully', async (done) => {
     teardown(brokerInstance).then(done)
   })
 
-  const clientInst = await initClient(currentConfig.frontPort, mockFn)
+  const clientInst = await initClient({
+    port: currentConfig.frontPort,
+    socketType: currentConfig.clientType,
+    onMessage: mockFn
+  })
 
   clientInst.send({
     type: 'task',
@@ -49,7 +45,11 @@ test('An client can fails to create a task', async (done) => {
     teardown(brokerInstance).then(done)
   })
 
-  const clientInst = await initClient(currentConfig.frontPort, mockFn)
+  const clientInst = await initClient({
+    port: currentConfig.frontPort,
+    socketType: currentConfig.clientType,
+    onMessage: mockFn
+  })
 
   clientInst.send({
     type: 'task',

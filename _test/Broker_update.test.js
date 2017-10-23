@@ -1,7 +1,6 @@
 /* @flow */
 import winston from 'winston'
-import Client from '../src/Client'
-import {setup, teardown, repeatIn} from '../utils'
+import {setup, teardown, repeatIn, initClient} from '../utils'
 import path from 'path'
 import config from './config'
 
@@ -49,15 +48,17 @@ test('Broker can fails to update a task result received from worker', async (don
     return this.send(objWork)
   })
 
-  let clientInst = await new Client({
-    queueUrl: `tcp://localhost:${currentConfig.frontPort}`,
+  let clientInst = await initClient({
+    port: currentConfig.frontPort,
+    socketType: currentConfig.clientType,
     onMessage: mockClientFn
-  }).init()
+  })
 
-  let workerInst = await new Client({
-    queueUrl: `tcp://localhost:${currentConfig.backPort}`,
+  let workerInst = await initClient({
+    port: currentConfig.backPort,
+    socketType: currentConfig.clientType,
     onMessage: mockWorkerFn
-  }).init()
+  })
 
   clientInst.send({
     type: 'task',
