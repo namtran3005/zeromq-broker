@@ -1,11 +1,14 @@
 /* @flow */
 import zeromq from 'zeromq'
+import BPromise from 'bluebird'
 
 export default class Client {
   queueUrl: string;
   onMessage: (payload: any) => any;
   requester: any;
   _type : string;
+  _resolve;
+  _reject;
 
   constructor (options: {
     queueUrl: string,
@@ -28,7 +31,11 @@ export default class Client {
     this.requester.setsockopt('linger', 0)
     this.requester.on('message', (...args) => {
       let data = this._type === 'req' ? args[0] : args[1]
-      this.onMessage(JSON.parse(data.toString()))
+      let parsedRep = JSON.parse(data.toString())
+      if (this.onMessage) {
+        this.onMessage(parsedRep)
+      }
+      this._resolve(parsedRep)
     })
     return this
   }
@@ -37,9 +44,13 @@ export default class Client {
     return this.requester.close()
   }
 
-  send (payload: any) {
-    let send = JSON.stringify(payload)
-    let data = this._type === 'req' ? send : ['', send]
-    this.requester.send(data)
+  send (payload: any): Promise<any> {
+    return new BPromise((resolve, reject) => {
+      this._resolve = resolve
+      this._reject = reject
+      let send = JSON.stringify(payload)
+      let data = this._type === 'req' ? send : ['', send]
+      this.requester.send(data)
+    })
   }
 }

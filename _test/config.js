@@ -1,14 +1,12 @@
 export default {
   'Broker_init': {
     queueName: 'Broker_init',
-    nextDest: 'nextBroker',
     frontPort: 5553,
     backPort: 5554,
     maxQueue: 10
   },
   'Broker_createTask': {
     queueName: 'Broker_createTask',
-    nextDest: 'nextBroker',
     clientType: 'dealer',
     frontPort: 5555,
     backPort: 5556,
@@ -16,14 +14,12 @@ export default {
   },
   'Broker_rejectTask': {
     queueName: 'Broker_rejectTask',
-    nextDest: 'nextBroker',
     frontPort: 5557,
     backPort: 5558,
     maxQueue: 10
   },
   'Broker_recover': {
     queueName: 'Broker_recover',
-    nextDest: 'nextBroker',
     clientType: 'dealer',
     frontPort: 5559,
     backPort: 5560,
@@ -31,7 +27,6 @@ export default {
   },
   'Broker_dispatch': {
     queueName: 'Broker_dispatch',
-    nextDest: 'nextBroker',
     clientType: 'dealer',
     frontPort: 5561,
     backPort: 5562,
@@ -40,7 +35,6 @@ export default {
   },
   'Broker_update': {
     queueName: 'Broker_update',
-    nextDest: 'nextBroker',
     clientType: 'dealer',
     frontPort: 5563,
     backPort: 5564,
@@ -49,7 +43,6 @@ export default {
   },
   'Broker_setDone': {
     queueName: 'Broker_setDone',
-    nextDest: 'nextBroker',
     clientType: 'dealer',
     frontPort: 5565,
     backPort: 5566,
@@ -57,10 +50,23 @@ export default {
   },
   'Broker_updateBadRep': {
     queueName: 'Broker_updateBadRep',
-    nextDest: 'nextBroker',
     clientType: 'req',
     frontPort: 5567,
     backPort: 5568,
     maxQueue: 10
-  }
+  },
+  'Broker_sendNext': [{
+    queueName: 'Broker_sendNext1',
+    clientType: 'dealer',
+    nextDest: 'tcp://localhost:5571',
+    frontPort: 5569,
+    backPort: 5570,
+    maxQueue: 10
+  }, {
+    queueName: 'Broker_sendNext2',
+    clientType: 'dealer',
+    frontPort: 5571,
+    backPort: 5572,
+    maxQueue: 10
+  }]
 }

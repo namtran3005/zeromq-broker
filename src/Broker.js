@@ -2,6 +2,7 @@
 import winston from 'winston'
 import zeromq from 'zeromq'
 import MongoSMQ from 'mongo-message'
+import Client from './Client'
 
 export default class Broker {
   numTask: number;
@@ -14,8 +15,10 @@ export default class Broker {
   queueInst: MongoSMQ;
   frontend : any;
   backend : any;
+  deliver : any;
   doneDef: any;
   notDoneDef : any;
+  _timeoutFd : any;
 
   constructor (options: {
     queueName: string,
@@ -57,8 +60,31 @@ export default class Broker {
     return this.queueInst.clean()
   }
 
+  async registerNextDest () {
+    let _sendNextAndAck = async () => {
+      let doneTask = await this.queueInst.Message.find(this.doneDef)
+      if (doneTask && doneTask.length !== 0) {
+        let resp = await this.deliver.send(doneTask[0])
+        if (resp && resp === 'received') {
+          await this.queueInst.removeMessageById({
+            _id: doneTask[0]._id
+          })
+        }
+      }
+      this._timeoutFd = setTimeout(_sendNextAndAck, 10000)
+    }
+    _sendNextAndAck()
+  }
+
   async initBroker () {
     await this.initQueue()
+    if (this.nextDest) {
+      this.deliver = await new Client({
+        queueUrl: this.nextDest,
+        type: 'dealer'
+      }).init()
+      await this.registerNextDest()
+    }
     this.frontend = zeromq.socket('router')
     this.backend = zeromq.socket('router')
     this.frontend.setsockopt('linger', 0)
@@ -91,6 +117,10 @@ export default class Broker {
   async deInitBroker () {
     this.frontend.close()
     this.backend.close()
+    if (this.nextDest) {
+      clearTimeout(this._timeoutFd)
+      this.deliver.deinit()
+    }
     await this.deInitQueue()
   }
 

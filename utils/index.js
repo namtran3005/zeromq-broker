@@ -8,7 +8,7 @@ export const repeatIn = (ms: number, interval: number, cb: Function) => {
   return new Promise((resolve) => {
     const timerId = setInterval(async () => {
       if (countDown === 0) {
-        clearTimeout(timerId)
+        clearInterval(timerId)
         resolve()
         return
       }
@@ -30,7 +30,6 @@ export function getRandomInt (min, max) {
 export async function setup (options) {
   const opts = Object.assign({}, {
     queueName: 'queue1',
-    nextDest: 'nextBroker',
     frontPort: 5551,
     backPort: 5552,
     maxQueue: 10
