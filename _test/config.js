@@ -68,5 +68,29 @@ export default {
     frontPort: 5571,
     backPort: 5572,
     maxQueue: 10
+  }],
+  'Broker_frontendReq': [{
+    queueName: 'Broker_frontendReq1',
+    clientType: 'dealer',
+    nextDest: 'tcp://localhost:5575',
+    frontPort: 5573,
+    backPort: 5574,
+    maxQueue: 10,
+    visibility: 5
+  }, {
+    queueName: 'Broker_frontendReq2',
+    clientType: 'dealer',
+    nextDest: 'tcp://localhost:5577',
+    frontPort: 5575,
+    backPort: 5576,
+    maxQueue: 10,
+    visibility: 5
+  }, {
+    queueName: 'Broker_frontendReq3',
+    clientType: 'dealer',
+    frontPort: 5577,
+    backPort: 5578,
+    maxQueue: 10,
+    visibility: 5
   }]
 }

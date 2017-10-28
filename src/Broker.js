@@ -19,6 +19,14 @@ export default class Broker {
   doneDef: any;
   notDoneDef : any;
   _timeoutFd : any;
+  onFrontReq : (mixed, mixed) => any;
+  onFrontResp : (mixed, mixed) => any;
+  onBackReq : (mixed, mixed) => any;
+  onBackResp : (mixed, mixed) => any;
+  onUpdateMsg: (payload: mixed) => {
+    query : { _id : string, tries : number},
+    update : any
+  } | void;
 
   constructor (options: {
     queueName: string,
@@ -27,10 +35,19 @@ export default class Broker {
     frontPort: number,
     backPort: number,
     maxQueue: number,
-    doneDef : any
+    doneDef : any,
+    onFrontReq : (mixed, mixed) => any,
+    onFrontResp : (mixed, mixed) => any,
+    onBackReq : (mixed, mixed) => any,
+    onBackResp : (mixed, mixed) => any,
+    onUpdateMsg: (payload: mixed) => {
+      query : { _id : string, tries : number},
+      update : any
+    } | void;
   }) {
     const {
-      queueName, visibility, nextDest, frontPort, backPort, maxQueue, doneDef
+      queueName, visibility, nextDest, frontPort, backPort, maxQueue, doneDef,
+      onFrontReq, onFrontResp, onBackReq, onBackResp, onUpdateMsg
     } = options
     this.numTask = 0
     this.maxQueue = maxQueue
@@ -41,6 +58,11 @@ export default class Broker {
     this.visibility = visibility || 30
     this.doneDef = doneDef || { 'message.result': { $exists: true } }
     this.notDoneDef = { $nor: [this.doneDef] }
+    this.onFrontReq = onFrontReq
+    this.onFrontResp = onFrontResp
+    this.onBackReq = onBackReq
+    this.onBackResp = onBackResp
+    this.onUpdateMsg = onUpdateMsg || this._onUpdateMsg
   }
 
   async initQueue (): Promise<Broker> {
@@ -63,9 +85,11 @@ export default class Broker {
   async registerNextDest () {
     let _sendNextAndAck = async () => {
       let doneTask = await this.queueInst.Message.find(this.doneDef)
+      winston.debug('Deliver retrived a done work with info %j\n', doneTask)
       if (doneTask && doneTask.length !== 0) {
         let resp = await this.deliver.send(doneTask[0])
         if (resp && resp === 'received') {
+          winston.debug('Task sended successfully %j\n', resp)
           await this.queueInst.removeMessageById({
             _id: doneTask[0]._id
           })
@@ -99,7 +123,8 @@ export default class Broker {
         delimiter: delimiter.toString(),
         payload: parsed
       })
-      this.receiveTask(reqAddress, delimiter, parsed)
+      const req = this.onFrontReq ? this.onFrontReq(parsed, reqAddress) : parsed
+      this.receiveTask(reqAddress, delimiter, req)
     })
     this.backend.on('message', (...reqMsg) => {
       const [reqAddress, delimiter, payload] = reqMsg
@@ -107,9 +132,10 @@ export default class Broker {
       winston.debug('Backend received payload with info\n', {
         reqAddress: reqAddress.toString('hex'),
         delimiter: delimiter.toString(),
-        payload: JSON.parse(payload.toString())
+        payload: parsed
       })
-      this.dispatchTask(reqAddress, delimiter, parsed)
+      const req = this.onBackReq ? this.onBackReq(parsed, reqAddress) : parsed
+      this.dispatchTask(reqAddress, delimiter, req)
     })
     return this
   }
@@ -170,43 +196,38 @@ export default class Broker {
     return resp
   }
 
-  _checkObjResult (payload: mixed) : {
-    _id : string,
-    tries : number,
-    message : { result : mixed }
+  _onUpdateMsg (payload: mixed) : {
+    query : { _id : string, tries : number},
+    update : any
   } | void {
-    let updateParam
     if (payload &&
         payload._id && typeof payload._id === 'string' &&
         payload.tries && typeof payload.tries === 'number' &&
         payload.message && payload.message.result
     ) {
-      updateParam = {
-        _id: payload._id,
-        tries: payload.tries,
-        message: {
-          result: payload.message.result
+      return {
+        query: {
+          _id: payload._id,
+          tries: payload.tries
+        },
+        update: {
+          $set: {
+            'message.result': payload.message.result
+          }
         }
       }
     }
-    return updateParam
   }
 
   async _updateTask (payload : mixed) : mixed {
     let resp
     try {
       winston.debug('   Broker update task with payload:\n %j', payload)
-      let updateParam = this._checkObjResult(payload)
+      let updateParam = this.onUpdateMsg(payload)
       if (updateParam == null) {
         throw Error('Update payload is invalid')
       } else {
-        resp = await this.queueInst.updateMessage({
-          _id: updateParam._id,
-          tries: updateParam.tries,
-          message: {
-            result: updateParam.message.result
-          }
-        })
+        resp = await this.queueInst.updateMessage(updateParam.query, updateParam.update)
       }
       if (resp) {
         winston.debug('   Broker update task successfully with ID:\n', JSON.stringify(resp))
