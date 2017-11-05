@@ -25,7 +25,7 @@ export default class Client {
     this._type = type || 'req'
   }
 
-  async init (): Promise<Client> {
+  async init () {
     this.requester = zeromq.socket(this._type)
     this.requester.connect(this.queueUrl)
     this.requester.setsockopt('linger', 0)
@@ -44,7 +44,7 @@ export default class Client {
     return this.requester.close()
   }
 
-  send (payload: any): Promise<any> {
+  send (payload: any) {
     return new BPromise((resolve, reject) => {
       this._resolve = resolve
       this._reject = reject

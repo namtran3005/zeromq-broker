@@ -65,7 +65,7 @@ export default class Broker {
     this.onUpdateMsg = onUpdateMsg || this._onUpdateMsg
   }
 
-  async initQueue (): Promise<Broker> {
+  async initQueue () {
     this.queueInst = await (new MongoSMQ({
       colName: this.queueName,
       visibility: this.visibility
