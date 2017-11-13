@@ -16,6 +16,8 @@ export default class Broker {
   frontend : any;
   backend : any;
   deliver : any;
+  ackerUrl : any;
+  _acker:any;
   doneDef: any;
   notDoneDef : any;
   _timeoutFd : any;
@@ -36,6 +38,7 @@ export default class Broker {
     backPort: number,
     maxQueue: number,
     doneDef : any,
+    ackerUrl: string,
     onFrontReq : (mixed, mixed) => any,
     onFrontResp : (mixed, mixed) => any,
     onBackReq : (mixed, mixed) => any,
@@ -47,7 +50,7 @@ export default class Broker {
   }) {
     const {
       queueName, visibility, nextDest, frontPort, backPort, maxQueue, doneDef,
-      onFrontReq, onFrontResp, onBackReq, onBackResp, onUpdateMsg
+      onFrontReq, onFrontResp, onBackReq, onBackResp, onUpdateMsg, ackerUrl
     } = options
     this.numTask = 0
     this.maxQueue = maxQueue
@@ -55,6 +58,7 @@ export default class Broker {
     this.nextDest = nextDest
     this.frontPort = frontPort
     this.backPort = backPort
+    this.ackerUrl = ackerUrl
     this.visibility = visibility || 30
     this.doneDef = doneDef || { 'message.result': { $exists: true } }
     this.notDoneDef = { $nor: [this.doneDef] }
@@ -85,17 +89,21 @@ export default class Broker {
   async registerNextDest () {
     let _sendNextAndAck = async () => {
       let doneTask = await this.queueInst.Message.find(this.doneDef)
-      winston.debug('Deliver retrived a done work with info %j\n', doneTask)
+      winston.debug('Deliver retrived a done work with info %j\n', doneTask[0])
       if (doneTask && doneTask.length !== 0) {
         let resp = await this.deliver.send(doneTask[0])
-        if (resp && resp === 'received') {
+        if (resp && ((resp.result === 'received') || resp === 'received')) {
           winston.debug('Task sended successfully %j\n', resp)
+          if (this._acker) {
+            winston.debug('Task acked successfully %j\n', ackResp)
+            let ackResp = await this._acker.send(doneTask[0].message)
+          }
           await this.queueInst.removeMessageById({
             _id: doneTask[0]._id
           })
         }
       }
-      this._timeoutFd = setTimeout(_sendNextAndAck, 10000)
+      this._timeoutFd = setTimeout(_sendNextAndAck, 1000)
     }
     _sendNextAndAck()
   }
@@ -108,6 +116,12 @@ export default class Broker {
         type: 'dealer'
       }).init()
       await this.registerNextDest()
+    }
+    if (this.ackerUrl) {
+      this._acker = await new Client({
+        queueUrl: this.ackerUrl,
+        type: 'dealer'
+      }).init()
     }
     this.frontend = zeromq.socket('router')
     this.backend = zeromq.socket('router')
@@ -264,11 +278,17 @@ export default class Broker {
 
   async receiveTask (reqAddress: mixed, delimiter: mixed, payload: mixed) {
     const respMsg = [reqAddress, delimiter]
+    let resp
     if (this.isFull()) {
-      respMsg[2] = this._reject()
+      resp = this._reject()
     } else {
-      respMsg[2] = await this._receive(payload)
+      resp = await this._receive(payload)
     }
+    if (this.onFrontResp) {
+      /* TODO this params passing is confusing */
+      resp = this.onFrontResp(resp, payload)
+    }
+    respMsg[2] = resp
     winston.debug('  Frontend send response')
     return this._sendResp(respMsg, this.frontend)
   }

@@ -92,5 +92,20 @@ export default {
     backPort: 5578,
     maxQueue: 10,
     visibility: 5
+  }],
+  'Broker_dispatcher': [{
+    queueName: 'Broker_dispatcher1',
+    clientType: 'dealer',
+    nextDest: 'tcp://localhost:5581',
+    ackerUrl: 'tcp://localhost:9999',
+    frontPort: 5579,
+    backPort: 5580,
+    maxQueue: 1000
+  }, {
+    queueName: 'Broker_dispatcher2',
+    clientType: 'dealer',
+    frontPort: 5581,
+    backPort: 5582,
+    maxQueue: 1000
   }]
 }
