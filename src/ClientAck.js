@@ -47,23 +47,28 @@ export default class ClientAck {
       if (this.onMessage) {
         this.onMessage(parsedRep)
       }
+      if (!this.frontPort) {
+        this._promises[parsedRep.idx].resolve(parsedRep)
+      }
     })
 
-    this.acker = zeromq.socket('router')
-    this.acker.setsockopt('linger', 0)
-    this.acker.bindSync(`tcp://*:${this.frontPort}`)
-    this.acker.on('message', (...reqMsg) => {
-      const [reqAddress, delimiter, payload] = reqMsg
-      const parsed = JSON.parse(payload.toString())
-      winston.debug('Acker received ack with info\n', {
-        reqAddress: reqAddress.toString('hex'),
-        delimiter: delimiter.toString(),
-        payload: parsed
+    if (this.frontPort) {
+      this.acker = zeromq.socket('router')
+      this.acker.setsockopt('linger', 0)
+      this.acker.bindSync(`tcp://*:${this.frontPort}`)
+      this.acker.on('message', (...reqMsg) => {
+        const [reqAddress, delimiter, payload] = reqMsg
+        const parsed = JSON.parse(payload.toString())
+        winston.debug('Acker received ack with info\n', {
+          reqAddress: reqAddress.toString('hex'),
+          delimiter: delimiter.toString(),
+          payload: parsed
+        })
+        const resp = this.onFrontReq ? this.onFrontReq(parsed, reqAddress) : parsed
+        this._promises[parsed.idx].resolve(resp)
+        this._sendResp([reqAddress, delimiter, true], this.acker)
       })
-      const resp = this.onFrontReq ? this.onFrontReq(parsed, reqAddress) : parsed
-      this._promises[parsed.idx].resolve(resp)
-      this._sendResp([reqAddress, delimiter, true], this.acker)
-    })
+    }
     return this
   }
 

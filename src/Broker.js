@@ -95,8 +95,8 @@ export default class Broker {
         if (resp && ((resp.result === 'received') || resp === 'received')) {
           winston.debug('Task sended successfully %j\n', resp)
           if (this._acker) {
-            winston.debug('Task acked successfully %j\n', ackResp)
             let ackResp = await this._acker.send(doneTask[0].message)
+            winston.debug('Task acked successfully %j\n', ackResp)
           }
           await this.queueInst.removeMessageById({
             _id: doneTask[0]._id

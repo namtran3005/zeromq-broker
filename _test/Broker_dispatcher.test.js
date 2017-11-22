@@ -71,7 +71,6 @@ test('Broker can send list of tasks', async (done) => {
   })
 
   const mockClientFn = jest.fn().mockImplementation((msg, i) => {
-    console.log(msg)
     return msg
   })
 
@@ -134,7 +133,6 @@ test('Broker can send list of tasks', async (done) => {
   for (let i = 0; i < 3; i++) {
     msg.message.current.type = i
     arrPromise.push(clientInst.send(msg).then((resp) => {
-      console.log(`Resp ${i}`, resp)
       expect(resp.dones[0].type).toBe(i)
     }))
   }
