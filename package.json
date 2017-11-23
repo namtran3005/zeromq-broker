@@ -5,9 +5,7 @@
   "main": "lib/index.js",
   "jsnext:main": "lib/index.js",
   "scripts": {
-    "build": "./node_modules/.bin/tsc",
-    "test": "./node_modules/.bin/jest --coverage ./_test/*.test.ts",
-    "prepublish": "npm run build"
+    "test": "./node_modules/.bin/jest --coverage ./_test/*.test.ts"
   },
   "authors": [
     "Tran Hoai Nam <ntran.picom@gmail.com> (https://github.com/namtran3005)"
