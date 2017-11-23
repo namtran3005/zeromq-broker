@@ -6,7 +6,7 @@
   "jsnext:main": "lib/index.js",
   "scripts": {
     "build": "babel src --out-dir lib && ./node_modules/.bin/flow-copy-source src lib",
-    "test": "./node_modules/.bin/jest --coverage ./_test/*.test.js",
+    "test": "./node_modules/.bin/jest --coverage ./_test/*.test.ts",
     "prepublish": "npm run build"
   },
   "authors": [
@@ -15,13 +15,20 @@
   "license": "MIT",
   "dependencies": {
     "bluebird": "^3.5.1",
-    "mongo-message": "^0.0.25",
+    "mongo-message": "0.0.27",
     "mongoose": "^4.12.3",
     "uuid": "^3.1.0",
     "winston": "^2.3.1",
     "zeromq": "^4.6.0"
   },
   "devDependencies": {
+    "@types/bluebird": "^3.5.18",
+    "@types/jest": "^21.1.6",
+    "@types/mongoose": "^4.7.27",
+    "@types/node": "^8.0.53",
+    "@types/uuid": "^3.4.3",
+    "@types/winston": "^2.3.7",
+    "@types/zeromq": "^4.5.3",
     "babel-cli": "^6.26.0",
     "babel-core": "^6.26.0",
     "babel-eslint": "^8.0.1",
@@ -40,18 +47,23 @@
     "flow-copy-source": "^1.2.1",
     "flow-typed": "^2.2.3",
     "jest": "^21.2.1",
-    "standard": "^10.0.3"
+    "standard": "^10.0.3",
+    "ts-jest": "^21.2.3",
+    "ts-node": "^3.3.0",
+    "tslint": "^5.8.0",
+    "typescript": "^2.6.1"
   },
-  "standard": {
-    "parser": "babel-eslint",
-    "plugins": [
-      "flowtype"
-    ],
-    "env": [
-      "jest"
-    ],
-    "globals": [
-      "jasmine"
+  "jest": {
+    "transform": {
+      "^.+\\.ts?$": "ts-jest"
+    },
+    "testRegex": "(/_test/.*\\.(test|spec))\\.(jsx?|tsx?)$",
+    "moduleFileExtensions": [
+      "ts",
+      "tsx",
+      "js",
+      "jsx",
+      "json"
     ]
   },
   "repository": "git@github.com:namtran3005/mongo-message.git",

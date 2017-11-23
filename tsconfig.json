@@ -1,0 +1,22 @@
+{
+    "compilerOptions": {
+        "outDir": "./dist/",
+        "sourceMap": true,
+        "noImplicitAny": false,
+        "strictNullChecks":false,
+        "declaration": true,
+        "module": "commonjs",
+        "target": "es5",
+        "jsx": "react",
+        "lib": ["esnext"]
+    },
+    "include": [
+        "src/**/*",
+        "utils/**/*",
+        "_test/**/*"
+    ],
+    "exclude": [
+        "node_modules",
+        "**/*.spec.ts"
+    ]
+}
